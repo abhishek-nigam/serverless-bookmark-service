@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import App from "./App";
 
-test("renders learn react link", () => {
+test("renders bookmark service header", () => {
   render(<App />);
-  const divElement = screen.getByText(/Test Netlify functions/i);
-  expect(divElement).toBeInTheDocument();
+  const ele = screen.getByText(/Bookmark Service/i);
+  expect(ele).toBeInTheDocument();
 });
