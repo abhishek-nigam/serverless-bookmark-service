@@ -62,24 +62,17 @@ async function createBookmark(event, context) {
   }
 
   const { address, title, tags } = requestBody;
-  const currentTimestamp = new Date();
-  const bookmarkID = parseInt(currentTimestamp.getTime() / 1000);
 
   // insert bookmark
-  await pool.query(
+  const { rows: insertBookmarkResultRows } = await pool.query(
     `
-          INSERT INTO bookmark (_id, created_at, updated_at, link, title)
-          VALUES ($1,$2,$3,$4,$5)
-          ON CONFLICT (_id) DO UPDATE SET updated_at = EXCLUDED.updated_at, link = EXCLUDED.link, title = EXCLUDED.title
+          INSERT INTO bookmark (link, title)
+          VALUES ($1,$2)
+          RETURNING _id
       `,
-    [
-      bookmarkID,
-      currentTimestamp.toISOString(),
-      currentTimestamp.toISOString(),
-      address,
-      title,
-    ]
+    [address, title]
   );
+  const bookmarkID = insertBookmarkResultRows[0]["_id"];
 
   // insert tags in loop
   for (const tag of tags) {
