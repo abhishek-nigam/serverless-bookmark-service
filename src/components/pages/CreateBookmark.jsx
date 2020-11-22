@@ -1,210 +1,140 @@
-import Header from "../elements/Header";
-import Container from "react-bootstrap/Container";
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
-import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
-import Toast from "react-bootstrap/Toast";
-import { Formik } from "formik";
-import { object, string } from "yup";
-import { functionsBaseURL } from "../../constants";
 import { useState } from "react";
-import { nanoid } from "nanoid";
+import Container from "react-bootstrap/Container";
+import Spinner from "react-bootstrap/Spinner";
+import Button from "react-bootstrap/Button";
+import Alert from "react-bootstrap/Alert";
+import { Formik } from "formik";
+import Form from "react-bootstrap/Form";
+import { object as yupObject, string as yupString } from "yup";
+import Header from "../elements/Header";
+import { functionsBaseURL } from "../../constants";
+
+const initialAlertData = {
+  show: false,
+  variant: "success", // success|failure
+  message: "",
+};
 
 function CreateBookmark() {
-  const [showToast, setShowToast] = useState(false);
-  const [toastData, setToastData] = useState({
-    toastHeader: "",
-    toastBody: "",
-    toastHasError: false,
-  });
-  const [tags, setTags] = useState([]);
-  const [tagInputValue, setTagInputValue] = useState("");
+  const [alertData, setAlertData] = useState(initialAlertData);
 
-  function tagClickHandler(tag) {
-    setTags(
-      tags.map((el) => {
-        if (el.id !== tag.id) {
-          return el;
-        } else {
-          return {
-            ...el,
-            active: !el.active,
-          };
-        }
-      })
-    );
-  }
+  function showAlert(message, variant) {
+    setAlertData({
+      message: message,
+      show: true,
+      variant: variant,
+    });
 
-  function tagAddButtonClickHandler() {
-    setTags([
-      ...tags,
-      ...tagInputValue.split(",").map((value) => ({
-        id: nanoid(),
-        name: value.trim(),
-        active: true,
-      })),
-    ]);
-    setTagInputValue("");
-  }
-
-  function saveBookmark(values, setSubmitting) {
-    fetch(`${functionsBaseURL}/bookmark`, {
-      method: "post",
-      body: JSON.stringify({
-        title: values.title.trim(),
-        address: values.address.trim(),
-        tags: tags.filter((tag) => tag.active).map((tag) => tag.name),
-      }),
-    })
-      .then((response) => {
-        if (response.ok) {
-          setToastData({
-            toastHeader: "Success",
-            toastBody: "Bookmark successfully saved",
-            toastHasError: false,
-          });
-        } else {
-          setToastData({
-            toastHeader: "Error",
-            toastBody: "Error in saving bookmark",
-            toastHasError: false,
-          });
-        }
-        setShowToast(true);
-        setSubmitting(false);
-      })
-      .catch((err) => {
-        setToastData({
-          toastHeader: "Error",
-          toastBody: "Error in saving bookmark",
-          toastHasError: true,
-        });
-        setShowToast(true);
-        setSubmitting(false);
-      });
+    setTimeout(() => {
+      setAlertData(initialAlertData);
+    }, 3000);
   }
 
   return (
     <>
       <Header />
       <Container className="pt-3">
-        <Row>
-          <Col>
-            <Toast
-              onClose={() => setShowToast(false)}
-              show={showToast}
-              autohide={3000}
-            >
-              <Toast.Header>
-                <strong
-                  className={`mr-auto ${
-                    toastData.toastHasError ? "text-danger" : "text-success"
-                  }`}
-                >
-                  {toastData.toastHeader}
-                </strong>
-              </Toast.Header>
-              <Toast.Body>{toastData.toastBody}</Toast.Body>
-            </Toast>
-            <Formik
-              initialValues={{ title: "", address: "" }}
-              validationSchema={object().shape({
-                title: string().trim().required(),
-                address: string().trim().required().url(),
-              })}
-              onSubmit={(values, { setSubmitting }) => {
-                saveBookmark(values, setSubmitting);
-              }}
-            >
-              {({
-                values,
-                errors,
-                touched,
-                handleChange,
-                handleBlur,
-                handleSubmit,
-                isSubmitting,
-              }) => (
-                <Form noValidate onSubmit={handleSubmit}>
-                  <Form.Group controlId="formTitle">
-                    <Form.Label>Title</Form.Label>
-                    <Form.Control
-                      type="test"
-                      name="title"
-                      placeholder="Enter title"
-                      value={values.title}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      isInvalid={touched.title && errors.title}
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      {errors.title}
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                  <Form.Group controlId="formAddress">
-                    <Form.Label>Address</Form.Label>
-                    <Form.Control
-                      type="url"
-                      name="address"
-                      placeholder="Enter address"
-                      value={values.address}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      isInvalid={touched.address && errors.address}
-                    />
+        {alertData.show && (
+          <Alert
+            variant={alertData.variant}
+            dismissible
+            onClose={() => {
+              setAlertData(initialAlertData);
+            }}
+          >
+            {alertData.message}
+          </Alert>
+        )}
+        <Formik
+          initialValues={{ address: "" }}
+          validationSchema={yupObject().shape({
+            address: yupString().trim().required().url().label("Address"),
+          })}
+          onSubmit={(values, { setSubmitting }) => {
+            makeCreateBookmarkAPICall(
+              { address: values.address },
+              setSubmitting,
+              showAlert
+            );
+          }}
+        >
+          {({
+            values,
+            errors,
+            touched,
+            handleChange,
+            handleBlur,
+            handleSubmit,
+            isSubmitting,
+          }) => {
+            return (
+              <Form noValidate onSubmit={handleSubmit}>
+                <Form.Group controlId="address">
+                  <Form.Label>Address</Form.Label>
+                  <Form.Control
+                    type="url"
+                    name="address"
+                    placeholder="Enter address"
+                    value={values.address}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    isInvalid={touched.address && errors.address}
+                  />
+                  {errors.address && (
                     <Form.Control.Feedback type="invalid">
                       {errors.address}
                     </Form.Control.Feedback>
-                  </Form.Group>
-                  <div className="my-2">
-                    {tags.map((tag) => (
-                      <Button
-                        size="sm"
-                        variant={tag.active ? "success" : "light"}
-                        className="mr-1 mb-1"
-                        key={tag.id}
-                        onClick={() => tagClickHandler(tag)}
-                      >
-                        {tag.name}
-                      </Button>
-                    ))}
-                  </div>
-                  <Form.Group controlId="formTag">
-                    <Form.Label>Tag</Form.Label>
-                    <div className="d-flex">
-                      <Form.Control
-                        type="text"
-                        name="tag"
-                        placeholder="Enter tag"
-                        className="mr-2"
-                        value={tagInputValue}
-                        onChange={(e) => setTagInputValue(e.target.value)}
-                      />
-                      <Button
-                        onClick={() => tagAddButtonClickHandler()}
-                        disabled={tagInputValue.trim().length === 0}
-                      >
-                        Add
-                      </Button>
-                    </div>
-                  </Form.Group>
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    disabled={isSubmitting}
-                    block
-                  >
-                    {isSubmitting ? "Saving..." : "Save"}
-                  </Button>
-                </Form>
-              )}
-            </Formik>
-          </Col>
-        </Row>
+                  )}
+                </Form.Group>
+                <Button variant="primary" type="submit" disabled={isSubmitting}>
+                  <span>Save</span>
+                  {isSubmitting && (
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                      className="ml-1"
+                    />
+                  )}
+                </Button>
+              </Form>
+            );
+          }}
+        </Formik>
       </Container>
     </>
   );
+}
+
+function makeCreateBookmarkAPICall({ address }, setSubmitting, showAlert) {
+  fetch(`${functionsBaseURL}/bookmark`, {
+    method: "post",
+    body: JSON.stringify({
+      address: address,
+      title: "Test title",
+      tags: ["tag1", "tag2"],
+    }),
+  })
+    .then((response) => {
+      if (response.ok) {
+        showAlert("Saved successfully", "success");
+        setSubmitting(false);
+      } else {
+        showAlert("Error in saving", "danger");
+        setSubmitting(false);
+      }
+    })
+    .catch((error) => {
+      console.error(`Error in saving bookmark. Error: ${error}`);
+
+      showAlert(
+        "Couldn't save. Please check your internet connection",
+        "danger"
+      );
+      setSubmitting(false);
+    });
 }
 
 export default CreateBookmark;
