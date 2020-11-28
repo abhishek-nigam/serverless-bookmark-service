@@ -14,7 +14,6 @@
     "got": "^11.8.0",
     "metascraper": "^5.14.22",
     "metascraper-image": "^5.14.22",
-    "metascraper-logo": "^5.14.22",
     "metascraper-title": "^5.14.22",
     "pg": "^8.5.1",
     "pg-format": "^1.0.4",

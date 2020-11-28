@@ -1,7 +1,6 @@
 const { createResponse } = require("../utils");
 const metaScraper = require("metascraper")([
   require("metascraper-title")(),
-  require("metascraper-logo")(),
   require("metascraper-image")(),
 ]);
 const got = require("got");
@@ -53,16 +52,30 @@ async function getMetadata(event, context) {
   }
 
   // request URL
-  const { body: responseHTML, url } = await got(scrapeURL);
+  let responseHTML = "";
+  let requestURL = "";
+
+  try {
+    const { body, url } = await got(scrapeURL);
+    responseHTML = body;
+    requestURL = url;
+  } catch (error) {
+    return createResponse({
+      error: true,
+      data: {
+        message: "Requested URL doesn't exist or returned an error",
+      },
+      statusCode: 400,
+    });
+  }
 
   // scrape information
-  const metaData = await metaScraper({ html: responseHTML, url });
+  const metaData = await metaScraper({ html: responseHTML, url: requestURL });
 
   return createResponse({
     error: false,
     data: {
       title: metaData.title || "",
-      logo: metaData.logo || "",
       image: metaData.image || "",
     },
     statusCode: 200,
