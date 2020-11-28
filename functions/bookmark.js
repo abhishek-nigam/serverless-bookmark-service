@@ -5,6 +5,8 @@ const {
   array: yupArray,
 } = require("yup");
 const Pool = require("pg").Pool;
+const pgFormat = require("pg-format");
+const { createResponse } = require("../utils");
 
 const pool = new Pool({
   user: process.env.DB_USER,
@@ -74,49 +76,33 @@ async function createBookmark(event, context) {
   );
   const bookmarkID = insertBookmarkResultRows[0]["_id"];
 
-  // insert tags in loop
-  for (const tag of tags) {
-    await pool.query(
-      `
-          INSERT INTO tag (_id)
-          VALUES ($1)
-          ON CONFLICT (_id) DO NOTHING
-        `,
-      [tag]
-    );
-  }
+  // insert tags
+  const tagsInsertQuery = pgFormat(
+    `
+    INSERT INTO tag (_id)
+    VALUES %L
+    ON CONFLICT (_id) DO NOTHING
+  `,
+    tags.map((tag) => [tag])
+  );
 
-  // insert bookmark tag mapping records in loop
-  for (const tag of tags) {
-    await pool.query(
-      `
-          INSERT INTO bookmark_tag_mapping (bookmark_id, tag_id)
-          VALUES ($1,$2)
-          ON CONFLICT (bookmark_id, tag_id) DO NOTHING
-        `,
-      [bookmarkID, tag]
-    );
-  }
+  await pool.query(tagsInsertQuery);
+
+  // insert bookmark tag mapping records
+  const bookmarkTagMappingsInsertQuery = pgFormat(
+    `
+      INSERT INTO bookmark_tag_mapping (bookmark_id, tag_id)
+      VALUES %L
+      ON CONFLICT (bookmark_id, tag_id) DO NOTHING
+    `,
+    tags.map((tag) => [bookmarkID, tag])
+  );
+
+  await pool.query(bookmarkTagMappingsInsertQuery);
 
   return createResponse({
     error: false,
     data: {},
     statusCode: 201,
   });
-}
-
-function createResponse({
-  error = false,
-  statusCode = 200,
-  data = {},
-  headers = {},
-}) {
-  return {
-    statusCode: statusCode,
-    body: JSON.stringify({ error: error, data: data }),
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
-  };
 }
